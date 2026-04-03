@@ -1,0 +1,32 @@
+{
+  "name": "ai-stock-node",
+  "version": "1.0.0",
+  "description": "AI Trading Journal - 交易复盘笔记系统",
+  "type": "module",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "start": "fastify start -l info app.js",
+    "dev": "fastify start -w -l info -P app.js"
+  },
+  "keywords": ["stock", "ai", "langchain", "kimi", "a-share"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0",
+    "@fastify/autoload": "^6.0.0",
+    "@fastify/sensible": "^6.0.0",
+    "@fastify/cors": "^10.0.0",
+    "fastify-cli": "^8.0.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.3.0",
+    "langchain": "^0.3.0",
+    "dotenv": "^16.0.0",
+    "zod": "^3.22.0",
+    "technicalindicators": "^3.1.0"
+  }
+}
