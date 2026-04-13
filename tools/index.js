@@ -4,6 +4,30 @@ import * as eastmoney from '../services/eastmoney.js';
 import { calculateIndicators } from '../services/indicators.js';
 
 export function createTools() {
+  const getMarketOverview = new DynamicStructuredTool({
+    name: 'get_market_overview',
+    description:
+      '获取A股大盘环境概览，返回上证指数、深证成指、创业板指的最新点位、涨跌幅与市场情绪判断，用于先判断大盘风险偏好再分析个股',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const data = await eastmoney.getMarketOverview();
+        let result = `数据时间: ${data.timestamp}\n`;
+        result += `大盘情绪: ${data.sentiment}\n\n`;
+        result += '主要指数:\n';
+        result += '名称       | 最新点位 | 涨跌额 | 涨跌幅 | 成交量(手) | 成交额(元)\n';
+        result += '-----------|----------|--------|--------|------------|-----------\n';
+        for (const item of data.indices) {
+          result += `${item.name.padEnd(9)}| ${String(item.price ?? '未知').padStart(8)} | ${String(item.change ?? '未知').padStart(6)} | ${String(item.changePct != null ? item.changePct + '%' : '未知').padStart(6)} | ${String(item.volume ?? '未知').padStart(10)} | ${String(item.amount ?? '未知')}\n`;
+        }
+        result += '\n提示: 大盘情绪仅基于三大指数实时涨跌幅的简化判断。';
+        return result;
+      } catch (e) {
+        return `获取大盘概览失败: ${e.message}`;
+      }
+    },
+  });
+
   const searchStockByName = new DynamicStructuredTool({
     name: 'search_stock_by_name',
     description:
@@ -128,47 +152,11 @@ export function createTools() {
     },
   });
 
-  const searchNews = new DynamicStructuredTool({
-    name: 'search_stock_news',
-    description:
-      '搜索A股股票相关的最新新闻和资讯，用于消息面/舆情分析。支持传入股票名称或代码',
-    schema: z.object({
-      keyword: z.string().describe('搜索关键词，推荐用股票名称如"贵州茅台"，也可以传股票代码如"600519"'),
-    }),
-    func: async ({ keyword }) => {
-      try {
-        let searchKeyword = keyword;
-        if (/^\d{6}$/.test(keyword)) {
-          try {
-            const data = await eastmoney.getKlineData(keyword, 1);
-            searchKeyword = data.name;
-          } catch {
-            /* use code as fallback */
-          }
-        }
-
-        const news = await eastmoney.searchStockNews(searchKeyword, 10);
-        if (!news.length) return `未找到与"${searchKeyword}"相关的新闻`;
-
-        let result = `"${searchKeyword}" 相关新闻 (共${news.length}条):\n\n`;
-        for (let i = 0; i < news.length; i++) {
-          result += `${i + 1}. ${news[i].title}\n`;
-          result += `   时间: ${news[i].date} | 来源: ${news[i].source}\n`;
-          if (news[i].content) result += `   摘要: ${news[i].content}\n`;
-          result += '\n';
-        }
-        return result;
-      } catch (e) {
-        return `搜索新闻失败: ${e.message}`;
-      }
-    },
-  });
-
   return [
+    getMarketOverview,
     searchStockByName,
     getStockKline,
     getStockInfo,
     analyzeTechnicals,
-    searchNews,
   ];
 }

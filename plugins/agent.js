@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { createTradingReviewer } from '../agents/tradingReviewer.js';
+import { createTradingReviewer } from '../main.js';
 
 export default fp(
   async function (fastify) {

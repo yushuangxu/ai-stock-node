@@ -186,35 +186,53 @@ export async function searchStocksByKeyword(keyword, limit = 10) {
 }
 
 /**
- * 搜索股票相关新闻（新浪财经搜索）
+ * 获取A股大盘主要指数概览（新浪行情）
  */
-export async function searchStockNews(keyword, pageSize = 10) {
-  const url = `https://search.sina.com.cn/news?q=${encodeURIComponent(keyword)}&c=news&from=channel&ie=utf-8&page=1`;
-  const res = await fetch(url, { headers: { ...HEADERS, Referer: 'https://search.sina.com.cn/' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+export async function getMarketOverview() {
+  const symbols = ['s_sh000001', 's_sz399001', 's_sz399006'];
+  const url = `https://hq.sinajs.cn/list=${symbols.join(',')}`;
+  const text = await fetchGBK(url);
 
-  const html = await res.text();
-
-  const results = [];
-  const titleRegex = /<h2><a[^>]*href="([^"]*)"[^>]*>([^<]*(?:<[^>]*>[^<]*)*)<\/a><\/h2>/g;
-  const cleanTag = (s) => s.replace(/<[^>]+>/g, '').trim();
-
+  const parsed = [];
+  const reg = /var hq_str_([^=]+)="([^"]*)";/g;
   let m;
-  while ((m = titleRegex.exec(html)) !== null && results.length < pageSize) {
-    const title = cleanTag(m[2]);
-    if (!title) continue;
-    results.push({
-      title,
-      content: '',
-      date: '',
-      source: '新浪财经',
-      url: m[1],
+  while ((m = reg.exec(text)) !== null) {
+    const symbol = m[1];
+    const parts = (m[2] || '').split(',');
+    if (!parts.length || !parts[0]) continue;
+
+    parsed.push({
+      symbol,
+      name: parts[0] || symbol,
+      price: safeNum(parts[1]),
+      change: safeNum(parts[2]),
+      changePct: safeNum(parts[3]),
+      volume: safeNum(parts[4]),
+      amount: safeNum(parts[5]),
     });
   }
 
-  if (!results.length) {
-    return [{ title: `${keyword} 相关新闻请访问新浪财经搜索`, content: '', date: '', source: '新浪财经', url }];
+  const bySymbol = Object.fromEntries(parsed.map((row) => [row.symbol, row]));
+  const ordered = symbols.map((symbol) => bySymbol[symbol]).filter(Boolean);
+
+  if (!ordered.length) {
+    throw new Error('无法获取大盘指数数据');
   }
 
-  return results;
+  const avgChangePct =
+    ordered.reduce((sum, row) => sum + (row.changePct ?? 0), 0) / ordered.length;
+  const upCount = ordered.filter((row) => (row.changePct ?? 0) > 0).length;
+  const downCount = ordered.filter((row) => (row.changePct ?? 0) < 0).length;
+
+  let sentiment = '震荡';
+  if (avgChangePct >= 0.8 && upCount >= 2) sentiment = '偏强';
+  else if (avgChangePct <= -0.8 && downCount >= 2) sentiment = '偏弱';
+  else if (upCount >= 2 && avgChangePct > 0) sentiment = '温和偏强';
+  else if (downCount >= 2 && avgChangePct < 0) sentiment = '温和偏弱';
+
+  return {
+    timestamp: new Date().toISOString(),
+    sentiment,
+    indices: ordered,
+  };
 }

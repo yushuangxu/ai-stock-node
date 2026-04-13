@@ -160,6 +160,7 @@ export default async function (fastify) {
         Connection: 'keep-alive',
         'Access-Control-Allow-Origin': '*',
       });
+      reply.raw.write(`data: ${JSON.stringify({ type: 'start' })}\n\n`);
 
       try {
         const chat_history = buildChatHistory(parsed.history);
@@ -167,6 +168,7 @@ export default async function (fastify) {
           { input, chat_history },
           { version: 'v2' },
         );
+        const iterator = eventStream[Symbol.asyncIterator]();
 
         let tokenBuffer = [];
 
@@ -179,7 +181,13 @@ export default async function (fastify) {
           tokenBuffer = [];
         };
 
-        for await (const event of eventStream) {
+        while (true) {
+          const { value: event, done } = await withTimeout(
+            iterator.next(),
+            180_000,
+          );
+          if (done) break;
+
           if (event.event === 'on_tool_start') {
             tokenBuffer = [];
             const toolName = event.name || '';
