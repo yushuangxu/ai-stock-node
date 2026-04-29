@@ -1,4 +1,4 @@
-import { createMoonshotLlm } from './shared.js';
+import { createMoonshotLlm, invokeWithRetry } from './shared.js';
 
 function messageToText(message) {
   const content = message?.content;
@@ -48,7 +48,8 @@ export function createReviewChecker() {
 2) 是否存在无法从输入数据推导的结论
 3) 是否存在空话/套话
 4) 个股复盘是否逐只覆盖 required_stocks 中的每只股票（名称或代码至少出现一个）
-5) 每只股票是否都有“当日表现 + 技术位置 + 操作评价 + 替代动作”四类信息
+5) 每只股票是否都有“当日表现 + 技术位置 + 操作评价 + 操作建议”四类信息
+6) 每只股票是否包含“成交量相对20日均量是放量/缩量/平量”的判断，并据此给出操作建议
 
 输入数据：
 ${dataJson}
@@ -60,7 +61,10 @@ ${requiredStocksJson}
 ${report}`;
 
       try {
-        const response = await llm.invoke(prompt);
+        const response = await invokeWithRetry(llm, prompt, {
+          maxAttempts: 2,
+          initialDelayMs: 500,
+        });
         const parsed = parseJsonSafe(messageToText(response));
         if (parsed && typeof parsed.pass === 'boolean') {
           return {

@@ -1,5 +1,40 @@
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { extractTradingNoteFromImages } from '../../services/imageExtract.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+const SESSION_MEMORY = new Map();
+const MAX_SESSION_TURNS = 10;
+const MEMORY_FILE = process.env.SESSION_MEMORY_FILE
+  ? path.resolve(process.env.SESSION_MEMORY_FILE)
+  : path.resolve(process.cwd(), 'data', 'session-memory.json');
+
+function loadSessionMemory() {
+  try {
+    if (!existsSync(MEMORY_FILE)) return;
+    const text = readFileSync(MEMORY_FILE, 'utf-8');
+    if (!text.trim()) return;
+    const json = JSON.parse(text);
+    if (!json || typeof json !== 'object') return;
+    for (const [key, value] of Object.entries(json)) {
+      if (Array.isArray(value)) {
+        SESSION_MEMORY.set(key, value);
+      }
+    }
+  } catch {
+    // ignore damaged file and continue with memory map
+  }
+}
+
+function persistSessionMemory() {
+  try {
+    const dir = path.dirname(MEMORY_FILE);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const obj = Object.fromEntries(SESSION_MEMORY);
+    writeFileSync(MEMORY_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+  } catch {
+    // ignore persistence errors to avoid breaking main flow
+  }
+}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -21,6 +56,7 @@ function buildChatHistory(history = []) {
 const journalBodySchema = {
   type: 'object',
   properties: {
+    sessionId: { type: 'string', default: '' },
     content: { type: 'string', default: '' },
     images: {
       type: 'array',
@@ -52,6 +88,7 @@ const journalBodySchema = {
 };
 
 function parseJournalBody(body) {
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : '';
   const content = typeof body.content === 'string' ? body.content : '';
   const images = Array.isArray(body.images) ? body.images : [];
   const history = Array.isArray(body.history) ? body.history : [];
@@ -61,7 +98,31 @@ function parseJournalBody(body) {
       error: '请填写交易说明文字，或上传至少一张截图（也可图文一起提交）',
     };
   }
-  return { content: text, images, history };
+  return { sessionId, content: text, images, history };
+}
+
+function getSessionHistory(sessionId) {
+  if (!sessionId) return [];
+  const list = SESSION_MEMORY.get(sessionId);
+  return Array.isArray(list) ? list : [];
+}
+
+function mergeHistory(sessionId, requestHistory = []) {
+  if (Array.isArray(requestHistory) && requestHistory.length) return requestHistory;
+  return getSessionHistory(sessionId);
+}
+
+function appendSessionTurn(sessionId, userContent, assistantContent) {
+  if (!sessionId) return;
+  const current = getSessionHistory(sessionId);
+  const next = [
+    ...current,
+    { role: 'user', content: userContent },
+    { role: 'assistant', content: assistantContent },
+  ];
+  const keep = next.slice(-MAX_SESSION_TURNS * 2);
+  SESSION_MEMORY.set(sessionId, keep);
+  persistSessionMemory();
 }
 
 async function buildReviewInput({ content, images }) {
@@ -72,6 +133,8 @@ async function buildReviewInput({ content, images }) {
 }
 
 export default async function (fastify) {
+  loadSessionMemory();
+
   fastify.post(
     '/review',
     {
@@ -80,6 +143,8 @@ export default async function (fastify) {
       },
     },
     async (request, reply) => {
+      if (!(await fastify.guardAgentAccess(request, reply, 'journal_review'))) return;
+
       const parsed = parseJournalBody(request.body);
       if (parsed.error) {
         return reply.status(400).send({ success: false, error: parsed.error });
@@ -104,14 +169,30 @@ export default async function (fastify) {
       }
 
       try {
-        const chat_history = buildChatHistory(parsed.history);
+        const mergedHistory = mergeHistory(parsed.sessionId, parsed.history);
+        const chat_history = buildChatHistory(mergedHistory);
         const result = await withTimeout(
           fastify.tradingReviewer.invoke({ input, chat_history }),
           180_000,
         );
+        appendSessionTurn(parsed.sessionId, input, result.output);
+        fastify.recordAuditLog({
+          scope: 'journal.review',
+          sessionId: parsed.sessionId,
+          ok: true,
+          input_size: input.length,
+          output_size: String(result.output || '').length,
+        });
         return { success: true, review: result.output };
       } catch (error) {
         fastify.log.error(error);
+        fastify.opsCounters.errors += 1;
+        fastify.recordAuditLog({
+          scope: 'journal.review',
+          sessionId: parsed.sessionId,
+          ok: false,
+          error: error.message || 'review_error',
+        });
         return reply.status(500).send({
           success: false,
           error: error.message || '复盘过程中发生错误',
@@ -128,6 +209,8 @@ export default async function (fastify) {
       },
     },
     async (request, reply) => {
+      if (!(await fastify.guardAgentAccess(request, reply, 'journal_review_stream'))) return;
+
       const parsed = parseJournalBody(request.body);
       if (parsed.error) {
         return reply.status(400).send({
@@ -163,7 +246,8 @@ export default async function (fastify) {
       reply.raw.write(`data: ${JSON.stringify({ type: 'start' })}\n\n`);
 
       try {
-        const chat_history = buildChatHistory(parsed.history);
+        const mergedHistory = mergeHistory(parsed.sessionId, parsed.history);
+        const chat_history = buildChatHistory(mergedHistory);
         const eventStream = fastify.tradingReviewer.streamEvents(
           { input, chat_history },
           { version: 'v2' },
@@ -171,6 +255,7 @@ export default async function (fastify) {
         const iterator = eventStream[Symbol.asyncIterator]();
 
         let tokenBuffer = [];
+        let finalOutput = '';
 
         const flushBuffer = () => {
           for (const t of tokenBuffer) {
@@ -200,9 +285,13 @@ export default async function (fastify) {
             const chunk = event.data?.chunk?.content;
             if (chunk) {
               tokenBuffer.push(chunk);
+              finalOutput += chunk;
             }
           } else if (event.event === 'on_chat_model_end') {
             const msg = event.data?.output;
+            if (typeof msg?.content === 'string' && msg.content.trim()) {
+              finalOutput = msg.content;
+            }
             const hasCalls =
               msg?.tool_calls?.length > 0 ||
               msg?.additional_kwargs?.tool_calls?.length > 0;
@@ -215,8 +304,24 @@ export default async function (fastify) {
         }
 
         flushBuffer();
+        appendSessionTurn(parsed.sessionId, input, finalOutput);
+        fastify.opsCounters.streamDone += 1;
+        fastify.recordAuditLog({
+          scope: 'journal.review.stream',
+          sessionId: parsed.sessionId,
+          ok: true,
+          input_size: input.length,
+          output_size: finalOutput.length,
+        });
         reply.raw.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
       } catch (error) {
+        fastify.opsCounters.errors += 1;
+        fastify.recordAuditLog({
+          scope: 'journal.review.stream',
+          sessionId: parsed.sessionId,
+          ok: false,
+          error: error.message || 'review_stream_error',
+        });
         reply.raw.write(
           `data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`,
         );

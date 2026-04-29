@@ -5,6 +5,15 @@ function createToolMap() {
   return new Map(tools.map((tool) => [tool.name, tool]));
 }
 
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(message || `工具调用超时(${ms}ms)`)), ms),
+    ),
+  ]);
+}
+
 function toText(value) {
   if (typeof value === 'string') return value;
   try {
@@ -26,10 +35,38 @@ function extractCodeFromSearchResult(text) {
   return match ? match[1] : null;
 }
 
+function parseVolumeSignal(technicalsRaw) {
+  const raw = String(technicalsRaw || '');
+  const latestVolume =
+    raw.match(/最新成交量:\s*([0-9.]+)/)?.[1] ?? null;
+  const avgVol20 =
+    raw.match(/20日均量:\s*([0-9.]+)/)?.[1] ?? null;
+  const volRatio =
+    raw.match(/量比\(今\/20日均\):\s*([0-9.]+)/)?.[1] ?? null;
+  const signal =
+    raw.match(/量比\(今\/20日均\):[^\n|]*\|\s*([^\n]+)/)?.[1]?.trim() ?? '未获取到';
+
+  let trend = '平量';
+  if (/放量/.test(signal)) trend = '放量';
+  else if (/缩量/.test(signal)) trend = '缩量';
+
+  return {
+    latest_volume: latestVolume ? Number(latestVolume) : null,
+    avg_volume_20d: avgVol20 ? Number(avgVol20) : null,
+    volume_ratio: volRatio ? Number(volRatio) : null,
+    signal,
+    trend,
+  };
+}
+
 async function callTool(toolMap, name, input = {}) {
   const tool = toolMap.get(name);
   if (!tool) throw new Error(`工具未注册: ${name}`);
-  const output = await tool.invoke(input);
+  const output = await withTimeout(
+    tool.invoke(input),
+    25_000,
+    `${name} 调用超时`,
+  );
   return toText(output);
 }
 
@@ -52,10 +89,9 @@ export async function fetchData(actions = []) {
   const marketRaw = await callTool(toolMap, 'get_market_overview', {});
   const market = parseMarket(marketRaw);
 
-  const stocksData = [];
-  for (const action of normalizedActions) {
+  const stocksData = await Promise.all(normalizedActions.map(async (action) => {
     const stockName = String(action.stock_name || '').trim();
-    if (!stockName) continue;
+    if (!stockName) return null;
 
     let code = /^\d{6}$/.test(stockName) ? stockName : null;
     let searchRaw = null;
@@ -66,21 +102,23 @@ export async function fetchData(actions = []) {
     }
 
     if (!code) {
-      stocksData.push({
+      return {
         action,
         stock_name: stockName,
         stock_code: null,
         error: '未能解析股票代码',
         search_raw: searchRaw,
-      });
-      continue;
+      };
     }
 
-    const stockInfoRaw = await callTool(toolMap, 'get_stock_info', { code });
-    const technicalsRaw = await callTool(toolMap, 'analyze_technicals', { code });
-    const klineRaw = await callTool(toolMap, 'get_stock_kline', { code, days: 60 });
+    const [stockInfoRaw, technicalsRaw, klineRaw] = await Promise.all([
+      callTool(toolMap, 'get_stock_info', { code }),
+      callTool(toolMap, 'analyze_technicals', { code }),
+      callTool(toolMap, 'get_stock_kline', { code, days: 60 }),
+    ]);
+    const volumeSignal = parseVolumeSignal(technicalsRaw);
 
-    stocksData.push({
+    return {
       action,
       stock_name: stockName,
       stock_code: code,
@@ -88,9 +126,10 @@ export async function fetchData(actions = []) {
       stock_info_raw: stockInfoRaw,
       technicals_raw: technicalsRaw,
       kline_raw: klineRaw,
+      volume_signal: volumeSignal,
       ...(searchRaw ? { search_raw: searchRaw } : {}),
-    });
-  }
+    };
+  }));
 
-  return { market, stocksData };
+  return { market, stocksData: stocksData.filter(Boolean) };
 }

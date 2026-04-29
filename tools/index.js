@@ -36,11 +36,12 @@ export function createTools() {
       keyword: z
         .string()
         .describe('股票名称或简称，如 贵州茅台、宁德时代、平安银行；也可传6位代码用于校验证券简称'),
-      limit: z.number().optional().describe('最多返回几条候选，默认8'),
+      limit: z.number().nullable().optional().describe('最多返回几条候选，默认8'),
     }),
     func: async ({ keyword, limit = 8 }) => {
       try {
-        const rows = await eastmoney.searchStocksByKeyword(keyword, limit);
+        const actualLimit = Number.isFinite(limit) ? limit : 8;
+        const rows = await eastmoney.searchStocksByKeyword(keyword, actualLimit);
         if (!rows.length) {
           return `未找到与「${keyword}」匹配的A股（6位代码），请让用户核对名称或提供6位代码。`;
         }
@@ -71,11 +72,12 @@ export function createTools() {
         .describe(
           '6位A股代码，如 600519、000001、300750；若用户只提供股名或简称，请先调用 search_stock_by_name 解析出 code',
         ),
-      days: z.number().optional().describe('获取天数，默认60'),
+      days: z.number().nullable().optional().describe('获取天数，默认60'),
     }),
     func: async ({ code, days = 60 }) => {
       try {
-        const data = await eastmoney.getKlineData(code, days);
+        const actualDays = Number.isFinite(days) ? days : 60;
+        const data = await eastmoney.getKlineData(code, actualDays);
         const recent = data.klines.slice(-15);
         const latest = data.klines[data.klines.length - 1];
 

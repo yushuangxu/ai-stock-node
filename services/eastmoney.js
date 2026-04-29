@@ -25,9 +25,9 @@ function safeNum(val) {
 function formatCap(cap) {
   const n = safeNum(cap);
   if (n === null) return '未知';
-  if (n >= 1e12) return `${(n / 1e12).toFixed(2)}万亿`;
-  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}亿`;
-  if (n >= 1e4) return `${(n / 1e4).toFixed(2)}万`;
+  if (n >= 1e12) return `${(n / 1e12).toFixed(2)}万亿手`;
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}亿手`;
+  if (n >= 1e4) return `${(n / 1e4).toFixed(2)}万手`;
   return String(n);
 }
 

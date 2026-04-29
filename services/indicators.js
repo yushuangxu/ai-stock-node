@@ -7,6 +7,11 @@ function r(v, decimals = 2) {
   return Number(v.toFixed(decimals));
 }
 
+function toWan(v, decimals = 2) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '数据不足';
+  return Number((v / 10000).toFixed(decimals));
+}
+
 export function calculateIndicators(klines) {
   const closes = klines.map((k) => k.close);
   const highs = klines.map((k) => k.high);
@@ -143,7 +148,7 @@ K: ${r(lKDJ?.k)} | D: ${r(lKDJ?.d)} | J: ${r(jValue)}
 判断: ${bollSignal}
 
 【成交量分析】
-最新成交量: ${latestVol} | 20日均量: ${r(avgVol20, 0)}
+最新成交量: ${toWan(latestVol)}万 | 20日均量: ${toWan(avgVol20)}万
 量比(今/20日均): ${r(volRatio)} | ${volSignal}
   `.trim();
 }

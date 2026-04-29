@@ -1,4 +1,4 @@
-import { createMoonshotLlm } from '../agents/shared.js';
+import { createMoonshotLlm, invokeWithRetry } from '../agents/shared.js';
 
 const ACTIONS = new Set(['buy', 'sell', 'hold', 'watch']);
 const ACTION_MAP = new Map([
@@ -87,7 +87,7 @@ function fallbackParse(input) {
   return actions;
 }
 
-export async function parseActions(input) {
+export async function parseActions(input, historyText = '') {
   const llm = createMoonshotLlm({ temperature: 0, maxTokens: 1200 });
   const prompt = `你是交易行为解析器。请从用户输入中提取交易动作，输出严格 JSON 数组，不要输出任何额外文字。
 
@@ -103,11 +103,17 @@ export async function parseActions(input) {
 - 不要臆造不存在的股票
 - 输出必须可被 JSON.parse 解析
 
+近期上下文（可为空）：
+${historyText || '无'}
+
 用户输入：
 ${input}`;
 
   try {
-    const response = await llm.invoke(prompt);
+    const response = await invokeWithRetry(llm, prompt, {
+      maxAttempts: 3,
+      initialDelayMs: 600,
+    });
     const parsed = parseJsonSafe(messageToText(response));
     if (Array.isArray(parsed)) {
       const normalized = parsed.map(normalizeItem).filter(Boolean);

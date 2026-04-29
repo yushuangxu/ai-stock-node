@@ -1,28 +1,15 @@
-'use strict'
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from '../helper.js';
 
-const { test } = require('node:test')
-const assert = require('node:assert')
-const { build } = require('../helper')
+test('root route returns app metadata', async (t) => {
+  const app = await build(t);
+  const res = await app.inject({ url: '/' });
+  const payload = JSON.parse(res.payload);
 
-test('default root route', async (t) => {
-  const app = await build(t)
-
-  const res = await app.inject({
-    url: '/'
-  })
-  assert.deepStrictEqual(JSON.parse(res.payload), { root: true })
-})
-
-// inject callback style:
-//
-// test('default root route', (t) => {
-//   t.plan(2)
-//   const app = await build(t)
-//
-//   app.inject({
-//     url: '/'
-//   }, (err, res) => {
-//     t.error(err)
-//     assert.deepStrictEqual(JSON.parse(res.payload), { root: true })
-//   })
-// })
+  assert.equal(res.statusCode, 200);
+  assert.equal(payload.name, 'AI Trading Journal');
+  assert.equal(payload.version, '1.0.0');
+  assert.equal(typeof payload.endpoints, 'object');
+  assert.equal(typeof payload.endpoints['POST /agent/analyze'], 'string');
+});

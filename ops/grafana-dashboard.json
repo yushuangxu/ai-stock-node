@@ -1,0 +1,56 @@
+{
+  "title": "AI Stock Node Ops",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Requests Total",
+      "targets": [
+        { "expr": "ai_stock_requests_total" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "stat",
+      "title": "Auth Failed Total",
+      "targets": [
+        { "expr": "ai_stock_auth_failed_total" }
+      ],
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "stat",
+      "title": "Rate Limited Total",
+      "targets": [
+        { "expr": "ai_stock_rate_limited_total" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "stat",
+      "title": "Errors Total",
+      "targets": [
+        { "expr": "ai_stock_errors_total" }
+      ],
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests Per Second",
+      "targets": [
+        { "expr": "rate(ai_stock_requests_total[1m])" }
+      ],
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate",
+      "targets": [
+        { "expr": "rate(ai_stock_errors_total[5m])" }
+      ],
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 }
+    }
+  ]
+}
