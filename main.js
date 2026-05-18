@@ -1,8 +1,8 @@
 import { assertZhipuApiKey } from './agents/shared.js';
 import { parseActions } from './modules/parseActions.js';
 import { fetchData } from './modules/fetchData.js';
-import { createReviewAgent } from './agents/reviewAgent.js';
-import { createReviewChecker } from './agents/reviewChecker.js';
+import { createReviewAgent } from './agents/short-term/reviewAgent.js';
+import { createReviewChecker } from './agents/short-term/reviewChecker.js';
 
 const GENERATE_TIMEOUT_MS = 110_000;
 const REWRITE_TIMEOUT_MS = 90_000;

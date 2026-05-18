@@ -1,7 +1,7 @@
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
-import { createTools } from '../tools/index.js';
-import { assertZhipuApiKey, createZhipuLlm } from './shared.js';
+import { createTools } from '../../tools/index.js';
+import { assertZhipuApiKey, createZhipuLlm } from '../shared.js';
 
 const SYSTEM_PROMPT = `你是A股分析师。目标是给出清晰、可执行、可验证的个股分析。
 
@@ -20,7 +20,7 @@ const SYSTEM_PROMPT = `你是A股分析师。目标是给出清晰、可执行�
 5. 风险与边界：成立前提、失效条件、主要风险、置信度(0-100)
 
 硬约束：
-- 先大盘后个股；数据缺失明确写“未获取到”
+- 先大盘后个股；数据缺失明确写"未获取到"
 - 标注数据语境（最新交易日）
 - 禁止编造数据；结论要能映射到已取到的数据
 - 所有内容仅供参考，不构成投资建议`;

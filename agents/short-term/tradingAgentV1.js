@@ -1,9 +1,9 @@
 import { createStockAnalyst } from './stockAnalyst.js';
 import { createDecisionAgent } from './decisionAgent.js';
-import { createToolRegistry } from '../tools/registry.js';
-import { buildTaskPrompt, normalizeTask } from '../modules/taskRouter.js';
-import { applyDecisionRules } from '../modules/decisionRules.js';
-import { formatDecisionSummary } from '../modules/replyFormat.js';
+import { createToolRegistry } from '../../tools/registry.js';
+import { buildTaskPrompt, normalizeTask } from '../../modules/taskRouter.js';
+import { applyDecisionRules } from '../../modules/decisionRules.js';
+import { formatDecisionSummary } from '../../modules/replyFormat.js';
 
 function withTimeout(promise, ms, message) {
   return Promise.race([

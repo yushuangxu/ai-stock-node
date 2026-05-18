@@ -1,4 +1,4 @@
-import { assertZhipuApiKey, createZhipuLlm, invokeWithRetry } from './shared.js';
+import { assertZhipuApiKey, createZhipuLlm, invokeWithRetry } from '../shared.js';
 
 function contentToText(content) {
   if (typeof content === 'string') return content;

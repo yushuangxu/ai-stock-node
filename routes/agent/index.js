@@ -1,6 +1,6 @@
 import { createSessionMemoryStore } from '../../modules/sessionMemory.js';
 import { buildAssistantSessionContent } from '../../modules/replyFormat.js';
-import { analyzeNews } from '../../agents/newsAnalyst.js';
+import { analyzeNews } from '../../agents/stock-picking/newsAnalyst.js';
 
 const bodySchema = {
   type: 'object',
@@ -229,5 +229,48 @@ export default async function (fastify) {
       fastify.log.error(error);
       return reply.status(500).send({ success: false, error: error.message || '新闻分析失败' });
     }
+  });
+
+  // ==================== 新闻/事件驱动选股分析（流式） ====================
+  fastify.post('/news-analyze/stream', async (request, reply) => {
+    const { newsContent } = request.body || {};
+    if (!newsContent || typeof newsContent !== 'string' || !newsContent.trim()) {
+      return reply.status(400).send({ success: false, error: '请提供新闻内容（newsContent）' });
+    }
+
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+    reply.raw.write(`data: ${JSON.stringify({ type: 'start' })}\n\n`);
+
+    try {
+      const result = await analyzeNews(newsContent, {
+        onStage(stageName, stageData) {
+          reply.raw.write(
+            `data: ${JSON.stringify({ type: 'stage', stage: stageName, data: stageData })}\n\n`,
+          );
+        },
+      });
+
+      reply.raw.write(
+        `data: ${JSON.stringify({ type: 'done', data: result })}\n\n`,
+      );
+      fastify.recordAuditLog({
+        scope: 'agent.news-analyze.stream',
+        ok: true,
+        query_preview: newsContent.slice(0, 80),
+      });
+    } catch (error) {
+      fastify.log.error(error);
+      fastify.opsCounters.errors += 1;
+      reply.raw.write(
+        `data: ${JSON.stringify({ type: 'error', message: error.message || '新闻分析失败' })}\n\n`,
+      );
+    }
+
+    reply.raw.end();
   });
 }

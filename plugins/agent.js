@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { createTradingReviewer } from '../main.js';
-import { createTradingAgentV1 } from '../agents/tradingAgentV1.js';
+import { createTradingAgentV1 } from '../agents/short-term/tradingAgentV1.js';
 
 export default fp(
   async function (fastify) {
