@@ -1,4 +1,4 @@
-import { createMoonshotLlm, invokeWithRetry } from './shared.js';
+import { createZhipuLlm, invokeWithRetry } from './shared.js';
 
 function messageToText(message) {
   const content = message?.content;
@@ -13,7 +13,7 @@ function messageToText(message) {
 }
 
 export function createReviewAgent() {
-  const llm = createMoonshotLlm({ temperature: 0.3, maxTokens: 4500 });
+  const llm = createZhipuLlm({ temperature: 0.3, maxTokens: 4500 });
 
   return {
     async generate({ rawInput, actions, dataObject, historyText = '', rewriteHint = '' }) {

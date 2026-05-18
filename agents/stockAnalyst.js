@@ -1,7 +1,7 @@
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { createTools } from '../tools/index.js';
-import { assertMoonshotApiKey, createMoonshotLlm } from './shared.js';
+import { assertZhipuApiKey, createZhipuLlm } from './shared.js';
 
 const SYSTEM_PROMPT = `你是A股分析师。目标是给出清晰、可执行、可验证的个股分析。
 
@@ -26,8 +26,8 @@ const SYSTEM_PROMPT = `你是A股分析师。目标是给出清晰、可执行�
 - 所有内容仅供参考，不构成投资建议`;
 
 export function createStockAnalyst(options = {}) {
-  assertMoonshotApiKey();
-  const llm = createMoonshotLlm({ temperature: 0.3, maxTokens: 4096 });
+  assertZhipuApiKey();
+  const llm = createZhipuLlm({ temperature: 0.3, maxTokens: 4096 });
 
   const tools = Array.isArray(options.tools) && options.tools.length ? options.tools : createTools();
 

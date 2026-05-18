@@ -1,5 +1,6 @@
 import { createSessionMemoryStore } from '../../modules/sessionMemory.js';
 import { buildAssistantSessionContent } from '../../modules/replyFormat.js';
+import { analyzeNews } from '../../agents/newsAnalyst.js';
 
 const bodySchema = {
   type: 'object',
@@ -54,7 +55,7 @@ export default async function (fastify) {
       if (!fastify.tradingAgentV1) {
         return reply.status(503).send({
           success: false,
-          error: '智能体服务未就绪，请检查 MOONSHOT_API_KEY 配置',
+          error: '智能体服务未就绪，请检查 ZHIPU_API_KEY 配置',
         });
       }
 
@@ -115,7 +116,7 @@ export default async function (fastify) {
       if (!fastify.tradingAgentV1) {
         return reply.status(503).send({
           success: false,
-          error: '智能体服务未就绪，请检查 MOONSHOT_API_KEY 配置',
+          error: '智能体服务未就绪，请检查 ZHIPU_API_KEY 配置',
         });
       }
 
@@ -214,4 +215,19 @@ export default async function (fastify) {
       reply.raw.end();
     },
   );
+
+  // ==================== 新闻/事件驱动选股分析 ====================
+  fastify.post('/news-analyze', async (request, reply) => {
+    const { newsContent } = request.body || {};
+    if (!newsContent || typeof newsContent !== 'string' || !newsContent.trim()) {
+      return reply.status(400).send({ success: false, error: '请提供新闻内容（newsContent）' });
+    }
+    try {
+      const result = await analyzeNews(newsContent);
+      return result;
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ success: false, error: error.message || '新闻分析失败' });
+    }
+  });
 }

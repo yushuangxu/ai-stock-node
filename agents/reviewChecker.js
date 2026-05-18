@@ -1,4 +1,4 @@
-import { createMoonshotLlm, invokeWithRetry } from './shared.js';
+import { createZhipuLlm, invokeWithRetry } from './shared.js';
 
 function messageToText(message) {
   const content = message?.content;
@@ -26,7 +26,7 @@ function parseJsonSafe(text) {
 }
 
 export function createReviewChecker() {
-  const llm = createMoonshotLlm({ temperature: 0, maxTokens: 800 });
+  const llm = createZhipuLlm({ temperature: 0, maxTokens: 800 });
 
   return {
     async check({ report, dataObject }) {

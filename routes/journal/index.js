@@ -153,7 +153,7 @@ export default async function (fastify) {
       if (!fastify.tradingReviewer) {
         return reply.status(503).send({
           success: false,
-          error: '复盘服务未就绪，请检查 MOONSHOT_API_KEY 配置',
+          error: '复盘服务未就绪，请检查 ZHIPU_API_KEY 配置',
         });
       }
 
@@ -164,7 +164,7 @@ export default async function (fastify) {
         fastify.log.error(err);
         return reply.status(502).send({
           success: false,
-          error: err.message || '图片识别失败，请检查 MOONSHOT_VISION_MODEL 是否支持视觉',
+          error: err.message || '图片识别失败，请检查 ZHIPU_VISION_MODEL 是否支持视觉',
         });
       }
 
@@ -222,7 +222,7 @@ export default async function (fastify) {
       if (!fastify.tradingReviewer) {
         return reply.status(503).send({
           success: false,
-          error: '复盘服务未就绪，请检查 MOONSHOT_API_KEY 配置',
+          error: '复盘服务未就绪，请检查 ZHIPU_API_KEY 配置',
         });
       }
 
@@ -233,7 +233,7 @@ export default async function (fastify) {
         fastify.log.error(err);
         return reply.status(502).send({
           success: false,
-          error: err.message || '图片识别失败，请检查 MOONSHOT_VISION_MODEL 是否支持视觉',
+          error: err.message || '图片识别失败，请检查 ZHIPU_VISION_MODEL 是否支持视觉',
         });
       }
 

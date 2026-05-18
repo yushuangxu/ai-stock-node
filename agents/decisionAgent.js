@@ -1,4 +1,4 @@
-import { assertMoonshotApiKey, createMoonshotLlm, invokeWithRetry } from './shared.js';
+import { assertZhipuApiKey, createZhipuLlm, invokeWithRetry } from './shared.js';
 
 function contentToText(content) {
   if (typeof content === 'string') return content;
@@ -70,8 +70,8 @@ action 含义：
 3) 若信号冲突明显，请输出 action=watch。`;
 
 export function createDecisionAgent() {
-  assertMoonshotApiKey();
-  const llm = createMoonshotLlm({ temperature: 0.1, maxTokens: 1000 });
+  assertZhipuApiKey();
+  const llm = createZhipuLlm({ temperature: 0.1, maxTokens: 1000 });
 
   return {
     async decide({ query, analysis }) {

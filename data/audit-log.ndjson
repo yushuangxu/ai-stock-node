@@ -6,3 +6,6 @@
 {"ts":"2026-04-29T08:21:50.805Z","scope":"agent.analyze.stream","sessionId":"mojsc3ejzsho2wbhtok","task":"full_analysis","query_preview":"协创数据","ok":true,"output_size":1251,"action":"buy","confidence":75,"triggered_rules":[]}
 {"ts":"2026-04-29T08:37:11.083Z","scope":"agent.analyze.stream","sessionId":"mojswx89c4gr1mmv98g","task":"full_analysis","query_preview":"协创数据怎么样","ok":true,"output_size":1158,"action":"buy","confidence":70,"triggered_rules":[]}
 {"ts":"2026-04-29T08:38:21.927Z","scope":"agent.analyze.stream","sessionId":"mojswx89c4gr1mmv98g","task":"full_analysis","query_preview":"我能买吗","ok":true,"output_size":1373,"action":"buy","confidence":70,"triggered_rules":[]}
+{"ts":"2026-04-29T09:10:08.458Z","scope":"agent.analyze.stream","sessionId":"moju3ar3jxtgq07byv","task":"full_analysis","query_preview":"工业富联","ok":true,"output_size":1124,"action":"hold","confidence":75,"triggered_rules":[]}
+{"ts":"2026-05-18T11:26:54.068Z","scope":"agent.analyze.stream","sessionId":"mpb4cejbliatg605xk","task":"full_analysis","query_preview":"工业富联","ok":true,"output_size":957,"action":"buy","confidence":70,"triggered_rules":[]}
+{"ts":"2026-05-18T11:37:29.561Z","scope":"agent.analyze.stream","sessionId":"mpb4q09tib1hfld8n8m","task":"full_analysis","query_preview":"胜宏科技","ok":true,"output_size":997,"action":"hold","confidence":70,"triggered_rules":[]}

@@ -1,4 +1,4 @@
-import { createMoonshotLlm, invokeWithRetry } from '../agents/shared.js';
+import { createZhipuLlm, invokeWithRetry } from '../agents/shared.js';
 
 const ACTIONS = new Set(['buy', 'sell', 'hold', 'watch']);
 const ACTION_MAP = new Map([
@@ -88,7 +88,7 @@ function fallbackParse(input) {
 }
 
 export async function parseActions(input, historyText = '') {
-  const llm = createMoonshotLlm({ temperature: 0, maxTokens: 1200 });
+  const llm = createZhipuLlm({ temperature: 0, maxTokens: 1200 });
   const prompt = `你是交易行为解析器。请从用户输入中提取交易动作，输出严格 JSON 数组，不要输出任何额外文字。
 
 字段要求：

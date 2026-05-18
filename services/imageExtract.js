@@ -24,15 +24,15 @@ function stripDataUrl(base64) {
  * @returns {Promise<string>}
  */
 export async function extractTradingNoteFromImages(images, userHint = '') {
-  const apiKey = config.moonshot.apiKey;
-  if (!apiKey) throw new Error('未配置 MOONSHOT_API_KEY');
+  const apiKey = config.zhipu.apiKey;
+  if (!apiKey) throw new Error('未配置 ZHIPU_API_KEY');
 
   if (!Array.isArray(images) || !images.length) {
     throw new Error('请至少提供一张图片');
   }
 
-  const model = config.moonshot.visionModel;
-  const baseUrl = config.moonshot.baseUrl.replace(/\/$/, '');
+  const model = config.zhipu.visionModel;
+  const baseUrl = config.zhipu.baseUrl.replace(/\/$/, '');
 
   for (const img of images) {
     if (!ALLOWED_MIME.has(img.mimeType)) {

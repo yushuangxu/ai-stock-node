@@ -1,4 +1,4 @@
-import { assertMoonshotApiKey } from './agents/shared.js';
+import { assertZhipuApiKey } from './agents/shared.js';
 import { parseActions } from './modules/parseActions.js';
 import { fetchData } from './modules/fetchData.js';
 import { createReviewAgent } from './agents/reviewAgent.js';
@@ -101,7 +101,7 @@ function hasVolumeJudgementForStocks(report, dataObject) {
 }
 
 export function createTradingReviewer() {
-  assertMoonshotApiKey();
+  assertZhipuApiKey();
 
   const reviewAgent = createReviewAgent();
   const checker = createReviewChecker();
